@@ -12,8 +12,9 @@ GPU-aware Docker image; everything runs end-to-end inside one container.
 
 ## Demo
 
-[`media/Path_Planning_Demo.mp4`](media/Path_Planning_Demo.mp4) — full
-end-to-end run.
+<video src="media/Path_Planning_Demo.mp4" controls width="720"></video>
+
+Full end-to-end run: [`media/Path_Planning_Demo.mp4`](media/Path_Planning_Demo.mp4).
 
 The drone takes off from the **green sphere** (start marker at the
 origin) and navigates the A\*-planned route to the **red sphere** (goal
