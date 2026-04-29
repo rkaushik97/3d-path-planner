@@ -1,0 +1,10 @@
+geometry_msgs/PointStamped start
+geometry_msgs/PointStamped goal
+float64 altitude_min
+float64 altitude_max
+planner_msgs/NoFlyZone[] no_fly_zones
+---
+nav_msgs/Path path
+bool success
+float64 planning_time_ms
+string message
