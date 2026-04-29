@@ -37,7 +37,7 @@ def _euclidean(a, b):
     return sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2)
 
 
-def a_star_3d(start, goal, blocked, alt_bounds, max_iters=300_000):
+def a_star_3d(start, goal, blocked, alt_bounds, max_iters=1_500_000):
     """A* on integer voxel indices with 26-connectivity.
 
     blocked: set of (i,j,k) treated as obstacles (already inflated + zones).
@@ -226,6 +226,37 @@ class PlannerNode(Node):
 
         blocked = self._get_inflated() | self._zones_to_indices(zones)
 
+        # Up-front diagnostics so a "no path" failure points at the right cause.
+        if start_idx in blocked:
+            response.success = False
+            response.message = f'Start {start_idx} is inside a blocked voxel (octomap or no-fly zone).'
+            response.planning_time_ms = 0.0
+            self.get_logger().warn(response.message)
+            return response
+        if goal_idx in blocked:
+            response.success = False
+            response.message = f'Goal {goal_idx} is inside a blocked voxel (octomap or no-fly zone).'
+            response.planning_time_ms = 0.0
+            self.get_logger().warn(response.message)
+            return response
+        if not (alt_bounds[0] <= start_idx[2] <= alt_bounds[1]):
+            response.success = False
+            response.message = f'Start z-index {start_idx[2]} outside altitude bounds {alt_bounds}.'
+            response.planning_time_ms = 0.0
+            self.get_logger().warn(response.message)
+            return response
+        if not (alt_bounds[0] <= goal_idx[2] <= alt_bounds[1]):
+            response.success = False
+            response.message = f'Goal z-index {goal_idx[2]} outside altitude bounds {alt_bounds}.'
+            response.planning_time_ms = 0.0
+            self.get_logger().warn(response.message)
+            return response
+
+        self.get_logger().info(
+            f'Search space: {len(blocked)} blocked voxels '
+            f'({len(self._get_inflated())} from octomap, {len(self._zones_to_indices(zones))} from zones).'
+        )
+
         t0 = time.perf_counter()
         path_idx = a_star_3d(start_idx, goal_idx, blocked, alt_bounds)
         elapsed_ms = (time.perf_counter() - t0) * 1000.0
@@ -233,8 +264,8 @@ class PlannerNode(Node):
         if path_idx is None:
             response.success = False
             response.message = (
-                'A* failed: start/goal blocked, out of altitude bounds, '
-                'inside a no-fly zone, or no connected free path.'
+                f'A* exhausted iter limit or open set after {elapsed_ms:.0f} ms — '
+                f'no connected free path from {start_idx} to {goal_idx}.'
             )
             response.planning_time_ms = elapsed_ms
             self.get_logger().warn(response.message)
